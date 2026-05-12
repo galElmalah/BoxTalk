@@ -1,0 +1,16 @@
+{
+  "name": "boxtalk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BoxTalk — local TTS Electron app + Chrome extension bridge",
+  "scripts": {
+    "start": "pnpm -F @boxtalk/app start",
+    "dev": "pnpm -F @boxtalk/app dev",
+    "build": "pnpm -F @boxtalk/app build",
+    "build:extension": "pnpm -F @boxtalk/extension build",
+    "dist:mac": "pnpm -F @boxtalk/app dist:mac",
+    "smoke": "pnpm -F @boxtalk/app smoke",
+    "e2e": "pnpm -F @boxtalk/app e2e",
+    "test": "pnpm -F @boxtalk/app test"
+  }
+}

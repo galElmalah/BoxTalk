@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "BoxTalk Reader",
+  "version": "0.1.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxBIlfU7d6R4lddnRWX07Cbx8Rxl3hehsGkeVz7JwGnGPcRSyDDu/VNNSg39/6viN3MaavWYejo7D2QN3eowFrzzOEh6Uaywg39/asQ3x2uPi74wY4GAI9IOUEQz5m9I5eYKPbdsV2G31y1J1OBdwe5b5a43YlGQ5sg6BLkek+PBVL+8C5jt4x5rh1DwktAwx41Y4hjsULNvYgKR8Ye0e3Miw6DHmYTlnPKhDsJvdgqORpMTpVWb5fiIwyZQR/R3WBSuqsooaI823jrmEoOioFj3Ffessz+XVS/an8xhNxnEeb4IxPRKVJ0fXuJSjJclnVEj72l8x3XmrFb1fEyf66QIDAQAB",
+  "description": "Send the current selection or the article body of any page to the BoxTalk desktop app for voice-over.",
+  "permissions": ["contextMenus", "activeTab", "scripting", "storage"],
+  "host_permissions": ["http://127.0.0.1:38219/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "BoxTalk Reader",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "commands": {
+    "speak-selection": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Speak the current selection with BoxTalk"
+    }
+  }
+}

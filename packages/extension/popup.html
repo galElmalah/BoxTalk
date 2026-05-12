@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>BoxTalk Reader</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <h1>BoxTalk</h1>
+    <span id="status-dot" class="status-dot status-unknown" title="Checking BoxTalk app…"></span>
+  </header>
+
+  <div class="modes" role="tablist">
+    <button id="mode-selection" class="mode-btn active" role="tab" aria-selected="true">Selection</button>
+    <button id="mode-page" class="mode-btn" role="tab" aria-selected="false">Whole page</button>
+  </div>
+
+  <textarea id="preview" rows="9" placeholder="Loading…" aria-label="Text to speak"></textarea>
+
+  <div class="meta">
+    <span id="meta-counts" class="meta-counts"></span>
+    <span id="meta-error" class="meta-error"></span>
+  </div>
+
+  <div class="actions">
+    <button id="speak-btn" class="primary" disabled>Speak now</button>
+    <button id="save-btn" class="ghost" disabled>Save for later</button>
+    <button id="refresh-btn" class="ghost icon" title="Re-extract">↻</button>
+  </div>
+
+  <footer>
+    <a href="#" id="open-options">Settings</a>
+    <span id="paired-status"></span>
+  </footer>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

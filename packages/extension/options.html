@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>BoxTalk Reader — Settings</title>
+  <style>
+    :root {
+      --bg: #f4f4f6;
+      --surface: #ffffff;
+      --border: #e3e3e8;
+      --text: #1a1a1f;
+      --muted: #6e6e78;
+      --accent: #ff4d8d;
+      --ok: #1b8754;
+      --err: #c0392b;
+    }
+    body {
+      font-family: Inter, -apple-system, sans-serif;
+      max-width: 520px;
+      margin: 40px auto;
+      padding: 0 20px;
+      color: var(--text);
+      background: var(--bg);
+    }
+    h1 {
+      font-family: "Bricolage Grotesque", Inter, sans-serif;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    p { color: var(--muted); line-height: 1.5; }
+    label { display: block; font-weight: 500; margin-top: 18px; }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      margin-top: 6px;
+      font: inherit;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    button {
+      margin-top: 14px;
+      padding: 9px 16px;
+      font: inherit;
+      font-weight: 500;
+      border: 0;
+      border-radius: 8px;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+    }
+    button:hover { filter: brightness(1.05); }
+    #save-status { margin-left: 12px; font-size: 12px; }
+    #save-status.ok  { color: var(--ok); }
+    #save-status.err { color: var(--err); }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: var(--surface);
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <h1>BoxTalk Reader</h1>
+  <p>
+    This extension talks to the BoxTalk desktop app on <code>127.0.0.1:38219</code>.
+    Open the desktop app, go to <strong>General → Browser extension</strong>, copy
+    the pairing token, and paste it below.
+  </p>
+
+  <label for="token">Pairing token</label>
+  <input id="token" type="text" autocomplete="off" spellcheck="false" />
+
+  <div>
+    <button id="save">Save</button>
+    <span id="save-status"></span>
+  </div>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "@boxtalk/extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome extension that sends web page text to the BoxTalk Electron app",
+  "scripts": {
+    "build": "node scripts/vendor.mjs",
+    "postinstall": "node scripts/vendor.mjs"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.5.0"
+  }
+}

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+vendor/
+.vite/
+.DS_Store
+*.log
+
+# Chrome extension signing key — keep local, never publish.
+packages/extension/*.pem
+# electron-builder output
+release/

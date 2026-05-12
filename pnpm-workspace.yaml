@@ -1,0 +1,9 @@
+packages:
+  - "packages/*"
+
+allowBuilds:
+  electron: true
+  electron-winstaller: false
+  onnxruntime-node: true
+  protobufjs: true
+  sharp: true
