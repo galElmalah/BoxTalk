@@ -1,6 +1,6 @@
 # BoxTalk
 
-Local text-to-speech on your desktop, paired with a Chrome extension that pipes any web page (or selected text) to it. Powered by [Kokoro](https://github.com/hexgrad/kokoro) — an 82M-parameter open-weights TTS model — running entirely on your machine via `onnxruntime-node`. No cloud round-trip, no API key, no telemetry. English only for now; the model supports other languages and they're on the roadmap.
+Local text-to-speech on your desktop, paired with a Chrome extension that pipes any web page (or selected text) to it. Powered by [Kokoro](https://github.com/hexgrad/kokoro) — an 82M-parameter open-weights TTS model — running entirely on your machine via `onnxruntime-node`. No cloud round-trip, no API key, no telemetry. Ships with an optional second engine ([VibeVoice](https://github.com/localai-org/vibevoice.cpp)) for higher-fidelity playback and voice cloning; see [Engines](#engines) below. English only for now; the models support other languages and they're on the roadmap.
 
 ![Queue view](docs/screenshots/queue.png)
 
@@ -109,9 +109,33 @@ Once digested, a card moves to the right-hand *Digested* column. Click *Play* an
 
 ![Speak view](docs/screenshots/speak.png)
 
-## Voices
+## Engines
 
-13 English Kokoro voices ship in the box — American + British, female + male. They're all listed in the **Model** card; click the play button on any row to preview the voice, and the radio dot to make it the default.
+BoxTalk ships with two TTS engines. Kokoro is on by default; VibeVoice is opt-in.
+
+### Kokoro 82M (default)
+
+82M-parameter open-weights model from [hexgrad/Kokoro](https://github.com/hexgrad/kokoro), running through `kokoro-js` + `onnxruntime-node`. Quantized to q8 ONNX, ~80 MB download, comfortable on a laptop CPU. Ships with **13 English voices** — American + British, female + male. Listed in the **Model** card; click the play button on any row to preview the voice, the radio dot to make it the default.
+
+### VibeVoice (optional, higher fidelity)
+
+[`vibevoice.cpp`](https://github.com/localai-org/vibevoice.cpp) — a C++ port of Microsoft VibeVoice that runs on CPU via GGUF weights. Three model sizes are surfaced in the UI:
+
+| Model                       | Size    | What you get                                                  | Status                                                              |
+| --------------------------- | ------- | ------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **VibeVoice Realtime 0.5B** | ~2 GB   | Pre-baked Carter + Emma voices, low-latency streaming         | Supported — GGUFs published on Hugging Face, downloads on demand    |
+| **VibeVoice 1.5B**          | ~6 GB   | Up to 4 speakers, voice cloning from reference audio          | Requires manual conversion of upstream weights                       |
+| **VibeVoice Large 7B**      | ~14 GB  | Highest fidelity, ModelScope mirror                           | Requires manual conversion of upstream weights                       |
+
+To enable VibeVoice you need to build the `vibevoice-cli` binary once:
+
+```bash
+pnpm build:vibevoice   # clones localai-org/vibevoice.cpp into vendor/ and builds
+```
+
+That writes the CLI to `packages/app/vendor/vibevoice.cpp/build/bin/vibevoice-cli`, which the app auto-detects. After that, open the **Model** tab in BoxTalk → click *Load* on **VibeVoice Realtime 0.5B** — the GGUFs (~2 GB) are pulled from `mudler/vibevoice.cpp-models` into the app's user-data dir, then you can pick Carter or Emma as your voice. The 1.5B and 7B cards show a friendly error until you point them at converted weights (see `packages/app/vibevoice.js`).
+
+Bundled distributions of BoxTalk include the prebuilt `vibevoice-cli` so end-users don't have to compile it themselves.
 
 ## Tests
 
@@ -128,8 +152,8 @@ See `packages/app/README.md` for what each test covers, and `packages/extension/
 - [x] Chrome extension that captures selected text / page content and pipes it to this app.
 - [x] Queue view with voice + speed selectors and digest-then-listen workflow.
 - [x] Seek + pause controls for digested audio.
+- [x] Optional second engine: VibeVoice (vibevoice.cpp) — Realtime 0.5B working today, 1.5B + 7B pending GGUF availability.
 - [ ] More languages — Kokoro supports Japanese, Mandarin, Spanish, French, Hindi, Italian, Portuguese.
-- [ ] Optional second engine (e.g. Microsoft VibeVoice) — requires Python sidecar, deferred.
 - [ ] "Summarize then read" mode driven by a local LLM in the extension.
 
 ## License
