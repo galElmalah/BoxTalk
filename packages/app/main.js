@@ -509,7 +509,7 @@ function addCandidateRow({ id, text, source, sourceUrl, title, timestamp }) {
   return row;
 }
 
-async function digestCandidate(id, voiceOverride, speedOverride) {
+async function digestCandidate(id, voiceOverride) {
   if (activeDigests.has(id)) return; // already running
   const row = stmts.getCandidate.get(id);
   if (!row) throw new Error("candidate not found: " + id);
@@ -517,8 +517,10 @@ async function digestCandidate(id, voiceOverride, speedOverride) {
 
   // Pick a voice. Caller can override, otherwise fall back to the user's
   // last-selected voice (kokoro for now since that's the only ready engine).
+  // Digestion is always rendered at 1.0× — playback speed is applied live
+  // on the audio element, not baked into the WAV.
   const voice = voiceOverride || row.voice || getSetting("selectedVoice", "af_heart");
-  const speed = Number.isFinite(speedOverride) && speedOverride > 0 ? speedOverride : 1;
+  const speed = 1;
 
   if (modelStates.kokoro?.state !== "ready") {
     throw new Error("Kokoro is not loaded — open Model and wait for it to be ready");
@@ -626,8 +628,8 @@ ipcMain.handle("candidates:clear", () => {
   broadcastCandidatesChanged();
   return r.changes;
 });
-ipcMain.handle("candidates:digest", async (_e, { id, voice, speed }) => {
-  await digestCandidate(String(id), voice || null, Number(speed) || null);
+ipcMain.handle("candidates:digest", async (_e, { id, voice }) => {
+  await digestCandidate(String(id), voice || null);
   return true;
 });
 ipcMain.handle("candidates:cancel", (_e, id) => {

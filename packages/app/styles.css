@@ -1294,13 +1294,13 @@ button.small {
 }
 .q-actions .small.ghost:hover { background: var(--surface); }
 
-/* ── Queue toolbar (voice + speed picked before digesting) ─────────── */
+/* ── Queue toolbar (only the voice used at digest time) ───────────── */
 .q-toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 14px 18px;
-  padding: 10px 12px;
+  align-items: center;
+  gap: 10px 18px;
+  padding: 10px 14px;
   margin-bottom: 8px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -1309,56 +1309,115 @@ button.small {
 
 .q-toolbar-field {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 10px;
   min-width: 0;
 }
-
-.q-toolbar-field-speed { flex: 1 1 200px; max-width: 320px; }
 
 .q-toolbar-label {
   font-size: 11px;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-}
-
-.q-toolbar-field select,
-.q-toolbar-field input[type="range"] {
-  font: inherit;
+  white-space: nowrap;
 }
 
 .q-toolbar-field select {
-  padding: 5px 8px;
+  font: inherit;
+  padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg);
   color: var(--text);
-  min-width: 220px;
+  min-width: 240px;
 }
 
-.q-toolbar-note {
-  font-size: 11.5px;
-  color: var(--muted);
-  flex: 1 1 220px;
-  align-self: center;
+/* ── Playback transport (always visible on digested cards) ────────── */
+.q-transport {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  margin: 6px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #fdfdfe 0%, #f7f7fa 100%);
 }
 
-/* ── Seek bar with hover tooltip showing m:ss ──────────────────────── */
-.q-seek {
+.q-transport-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.q-transport-row-secondary {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.q-transport-buttons {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 2px 0 6px;
+  flex-shrink: 0;
+}
+
+.q-skip,
+.q-play-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 90ms ease, background 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+}
+.q-skip:active,
+.q-play-toggle:active { transform: scale(0.94); }
+
+.q-skip {
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.q-skip:hover {
+  background: var(--surface);
+  color: var(--pink);
+  border-color: var(--pink);
+}
+
+.q-play-toggle {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: var(--pink);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(214, 51, 132, 0.22);
+}
+.q-play-toggle:hover { filter: brightness(1.05); }
+.q-play-toggle.is-playing { background: #1b8754; box-shadow: 0 4px 10px rgba(27, 135, 84, 0.22); }
+
+.q-icon-svg { display: block; }
+
+/* The scrub group: m:ss · seek bar · m:ss */
+.q-transport-scrub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 240px;
+  min-width: 0;
 }
 
 .q-seek-time {
   font-size: 11px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
-  min-width: 32px;
+  min-width: 34px;
   text-align: center;
 }
+.q-seek-time-end { color: var(--text); }
 
 .q-seek-track {
   position: relative;
@@ -1366,20 +1425,66 @@ button.small {
   display: flex;
   align-items: center;
   height: 22px;
+  min-width: 120px;
+}
+.q-seek-track.is-disabled .q-seek-rail { opacity: 0.55; }
+
+/* Painted rail behind the native range. The range itself is invisible-ish
+   but receives all pointer events so dragging just works. */
+.q-seek-rail {
+  position: absolute;
+  inset: 0;
+  margin: auto 0;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.q-seek-played {
+  height: 100%;
+  background: var(--pink);
+  border-radius: 999px;
+  transition: width 80ms linear;
 }
 
 .q-seek-track input[type="range"] {
+  position: relative;
+  z-index: 1;
   width: 100%;
   margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
 }
+.q-seek-track input[type="range"]:disabled { cursor: not-allowed; }
+
+.q-seek-track input[type="range"]::-webkit-slider-runnable-track {
+  height: 22px;
+  background: transparent;
+}
+.q-seek-track input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid var(--pink);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.18);
+  margin-top: 0;
+  cursor: grab;
+}
+.q-seek-track input[type="range"]:active::-webkit-slider-thumb { cursor: grabbing; }
 
 .q-seek-tooltip {
   position: absolute;
   bottom: 100%;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   transform: translateX(-50%);
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 3px 7px;
+  border-radius: 5px;
   background: var(--text);
   color: var(--bg);
   font-size: 10.5px;
@@ -1387,9 +1492,47 @@ button.small {
   white-space: nowrap;
   pointer-events: none;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  z-index: 2;
+}
+
+/* Speed segmented control */
+.q-rate-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.q-rate-segmented {
+  display: inline-flex;
+  align-items: stretch;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.q-rate-option {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  padding: 3px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 100ms ease, color 100ms ease;
+}
+.q-rate-option:hover { color: var(--text); }
+.q-rate-option.is-active {
+  background: var(--pink);
+  color: #fff;
 }
 
 @media (max-width: 760px) {
   .q-columns { grid-template-columns: 1fr; }
-  .q-toolbar-note { display: none; }
+  .q-transport-scrub { order: 3; flex-basis: 100%; }
 }

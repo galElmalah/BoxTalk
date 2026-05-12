@@ -45,7 +45,7 @@ contextBridge.exposeInMainWorld("queue", {
   list:     ()             => ipcRenderer.invoke("candidates:list"),
   delete:   (id)           => ipcRenderer.invoke("candidates:delete", id),
   clear:    ()             => ipcRenderer.invoke("candidates:clear"),
-  digest:   (id, voice, speed) => ipcRenderer.invoke("candidates:digest", { id, voice, speed }),
+  digest:   (id, voice)        => ipcRenderer.invoke("candidates:digest", { id, voice }),
   cancel:   (id)           => ipcRenderer.invoke("candidates:cancel", id),
   getAudio: (id)           => ipcRenderer.invoke("candidates:getAudio", id),
   onChanged:  subscribable("candidates:changed"),

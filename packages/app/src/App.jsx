@@ -93,12 +93,13 @@ export function App() {
     if (!tts.playing && playingDigestId) setPlayingDigestId(null);
   }, [tts.playing, playingDigestId]);
 
-  // Kick off background digestion for a queued candidate. Voice + speed are
-  // chosen in the Queue toolbar and passed through here.
+  // Kick off background digestion for a queued candidate. The voice is the
+  // one selected in the Queue toolbar (falls back to the app-wide default).
+  // Digest always synthesizes at 1.0× — playback speed is a live setting on
+  // the digested audio, not a render-time parameter.
   const digestCandidate = useCallback((id, opts = {}) => {
     const voice = opts.voice || selectedVoiceId;
-    const speed = opts.speed;
-    return queue.digest(id, voice, speed);
+    return queue.digest(id, voice);
   }, [queue, selectedVoiceId]);
 
   // Play a digested candidate. Click-toggle: if it's already playing, stop.
@@ -235,6 +236,7 @@ export function App() {
           paused={tts.paused}
           currentTime={tts.currentTime}
           duration={tts.duration}
+          playbackRate={tts.playbackRate}
           defaultVoiceId={selectedVoiceId}
           onDigest={digestCandidate}
           onCancel={queue.cancel}
@@ -242,6 +244,7 @@ export function App() {
           onPause={tts.pause}
           onResume={tts.resume}
           onSeek={tts.seek}
+          onPlaybackRateChange={tts.setPlaybackRate}
           onDismiss={queue.remove}
           onClear={queue.clear}
         />

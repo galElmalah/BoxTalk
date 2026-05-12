@@ -35,9 +35,9 @@ export function useQueue() {
     setProgress({});
   }, []);
 
-  const digest = useCallback(async (id, voice, speed) => {
+  const digest = useCallback(async (id, voice) => {
     try {
-      await window.queue.digest(id, voice, speed);
+      await window.queue.digest(id, voice);
     } catch (err) {
       console.error("digest:", err);
     }

@@ -40,7 +40,13 @@ async function main() {
     await window.store.setSelectedVoice("af_heart");
     await window.queue?.clear();
     await window.store.clearHistory();
-    for (const k of ["ui.view", "ui.expandedModels", "speakDraft.text", "speakDraft.speed"]) {
+    for (const k of [
+      "ui.view",
+      "ui.expandedModels",
+      "speakDraft.text",
+      "speakDraft.speed",
+      "queue.digestVoice",
+    ]) {
       await window.store.deleteSetting(k);
     }
   });
@@ -120,6 +126,46 @@ async function main() {
   ).catch(() => console.warn("[warn] candidates didn't render — taking screenshot anyway"));
   await page.locator('.nav-item[data-nav="queue"]').click();
   await page.waitForTimeout(400);
+
+  // Digest the shorter candidate so we can screenshot the digested transport.
+  // The pending column still has one waiting card for visual contrast.
+  if (!loadError) {
+    const digestedId = await page.evaluate(async () => {
+      const list = await window.queue.list();
+      const target = list.find((x) => /Welcome to BoxTalk/.test(x.title));
+      if (!target) return null;
+      await window.queue.digest(target.id, null);
+      return target.id;
+    });
+    if (digestedId) {
+      console.log("  ⏳ digesting", digestedId);
+      await page.waitForFunction(
+        (id) => {
+          const card = document.querySelector(`[data-id="${id}"]`);
+          return card?.getAttribute("data-status") === "digested";
+        },
+        digestedId,
+        { timeout: 120_000, polling: 250 },
+      );
+      console.log("  ✓ digested");
+
+      // Start playback, let it run a few seconds so the seek bar shows progress,
+      // then pause so the screenshot captures a stable mid-playback state.
+      await page.evaluate(async (id) => {
+        const card = document.querySelector(`[data-id="${id}"]`);
+        const playBtn = card?.querySelector('[data-action="play"]');
+        playBtn?.click();
+      }, digestedId);
+      await page.waitForTimeout(2200);
+      await page.evaluate(async (id) => {
+        const card = document.querySelector(`[data-id="${id}"]`);
+        const pauseBtn = card?.querySelector('[data-action="pause"]');
+        pauseBtn?.click();
+      }, digestedId);
+      await page.waitForTimeout(300);
+    }
+  }
+
   await snap("queue");
 
   await goto("general");

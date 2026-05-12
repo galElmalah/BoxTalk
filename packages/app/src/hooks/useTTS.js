@@ -28,6 +28,7 @@ export function useTTS({ history }) {
   const [paused, setPaused] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [playbackRate, setPlaybackRateState] = useState(1);
   const [busy, setBusy] = useState(false);
   const [previewingVoice, setPreviewingVoice] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -36,6 +37,7 @@ export function useTTS({ history }) {
 
   const mainAudio = useRef(null);
   const mainUrl = useRef(null);
+  const playbackRateRef = useRef(1);
   const previewAudio = useRef(null);
   const previewUrl = useRef(null);
   // Sequence token. Bumped on stop() / new speak(), so an in-flight
@@ -194,6 +196,7 @@ export function useTTS({ history }) {
     const blob = new Blob([wav], { type: "audio/wav" });
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
+    audio.playbackRate = playbackRateRef.current;
     mainAudio.current = audio;
     mainUrl.current = url;
 
@@ -237,6 +240,14 @@ export function useTTS({ history }) {
     const clamped = Math.max(0, Math.min(seconds, a.duration || seconds));
     a.currentTime = clamped;
     setCurrentTime(clamped);
+  }, []);
+
+  const setPlaybackRate = useCallback((rate) => {
+    const r = Math.max(0.25, Math.min(4, Number(rate) || 1));
+    playbackRateRef.current = r;
+    setPlaybackRateState(r);
+    const a = mainAudio.current;
+    if (a) a.playbackRate = r;
   }, []);
 
   const previewVoiceCall = useCallback(async ({ voice, model }) => {
@@ -289,6 +300,7 @@ export function useTTS({ history }) {
     paused,
     currentTime,
     duration,
+    playbackRate,
     busy,
     previewingVoice,
     previewLoading,
@@ -301,6 +313,7 @@ export function useTTS({ history }) {
     pause,
     resume,
     seek,
+    setPlaybackRate,
     stop,
     setError, // for callers to clear
   };
