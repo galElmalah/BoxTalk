@@ -91,15 +91,19 @@ Long pages are chunked by the desktop app and played back-to-back — each chunk
 
 ![Queue view](docs/screenshots/queue.png)
 
-The Queue is the first thing you see when you open BoxTalk, because it's where saved-for-later pages land. Pick the **voice** and **speed** at the top of the page — those settings apply when you press *Digest*. Digesting pre-renders the whole article to a single WAV under the app's user-data dir (`userData/digests/<id>.wav`), so playback is instant and works without the model loaded.
+The Queue is the first screen you land on, because it's where saved-for-later pages live. Pick the **voice** for new digests at the top of the page — the choice is persisted, and "Heart" is the default. Hit *Digest* on a waiting card and the desktop app chunks the text, synthesizes each chunk through Kokoro, merges the Float32 samples into one WAV, and writes the file to the app's user-data dir (`userData/digests/<id>.wav`). Playback after that is instant and works without the model loaded.
 
-Once digested, a card moves to the right-hand *Digested* column. Click *Play* and you get full transport controls: **pause/resume**, plus a **seek slider with a hover tooltip** that shows the minute-and-second you'd jump to. Stop returns the card to its idle state.
+Once digested, a card moves to the right-hand *Digested* column and reveals a self-contained transport panel:
+
+- **Skip back 30s** · **Play / Pause** · **Skip forward 30s** — circular icon buttons.
+- A draggable **seek bar** with a hover tooltip that surfaces the `m:ss` you'd jump to. The played portion fills in pink as audio progresses.
+- A **playback-speed segmented control** (`0.75× · 1× · 1.25× · 1.5× · 2×`). The chosen speed drives `audio.playbackRate` live — no re-synthesis — and the setting persists across plays. Digest itself always renders at 1.0×; speed is a listening preference, not a synthesis parameter.
 
 ## The other views
 
 | View          | What it does                                                                                                            |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **Queue**     | Pages + selections from the extension. Pick voice/speed at the top, *Digest* to render, *Play* with pause + seek.       |
+| **Queue**     | Pages + selections from the extension. Pick the voice at the top, *Digest* to render, then a full transport per card.   |
 | **General**   | App-level settings: selected model, history retention, and the pairing token.                                            |
 | **Model**     | Live model status. Kokoro 82M loads automatically on first launch (~80 MB download, then cached).                        |
 | **History**   | Every synthesis recorded, with text, voice, source, timestamp, duration. Live search + clear.                            |
@@ -150,8 +154,8 @@ See `packages/app/README.md` for what each test covers, and `packages/extension/
 ## Roadmap
 
 - [x] Chrome extension that captures selected text / page content and pipes it to this app.
-- [x] Queue view with voice + speed selectors and digest-then-listen workflow.
-- [x] Seek + pause controls for digested audio.
+- [x] Queue view with a per-card digest-then-listen workflow.
+- [x] Always-visible playback transport on digested cards: pause/resume, ±30s skip, draggable seek with hover tooltip, live playback-speed control.
 - [x] Optional second engine: VibeVoice (vibevoice.cpp) — Realtime 0.5B working today, 1.5B + 7B pending GGUF availability.
 - [ ] More languages — Kokoro supports Japanese, Mandarin, Spanish, French, Hindi, Italian, Portuguese.
 - [ ] "Summarize then read" mode driven by a local LLM in the extension.
