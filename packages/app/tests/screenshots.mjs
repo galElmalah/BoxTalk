@@ -149,14 +149,14 @@ async function main() {
       );
       console.log("  ✓ digested");
 
-      // Start playback, let it run a few seconds so the seek bar shows progress,
-      // then pause so the screenshot captures a stable mid-playback state.
+      // Start playback, let it run ~3.5s so the seek bar shows clear
+      // mid-track progress, then pause so the screenshot is stable.
       await page.evaluate(async (id) => {
         const card = document.querySelector(`[data-id="${id}"]`);
         const playBtn = card?.querySelector('[data-action="play"]');
         playBtn?.click();
       }, digestedId);
-      await page.waitForTimeout(2200);
+      await page.waitForTimeout(3500);
       await page.evaluate(async (id) => {
         const card = document.querySelector(`[data-id="${id}"]`);
         const pauseBtn = card?.querySelector('[data-action="pause"]');

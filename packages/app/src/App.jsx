@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MODELS, modelByVoiceId, voiceById, defaultVoiceId } from "./data/models.js";
 import { useModels } from "./hooks/useModels.js";
 import { useHistory } from "./hooks/useHistory.js";
@@ -87,10 +87,18 @@ export function App() {
 
   const [playingDigestId, setPlayingDigestId] = useState(null);
 
-  // Clear playing-digest indicator any time another playback (speak, preview,
-  // explicit stop) takes the audio slot.
+  // Clear playing-digest indicator when playback transitions from playing →
+  // stopped (audio ended, user hit Stop, or another flow took the slot).
+  // We track the previous tts.playing value because the raw "!tts.playing"
+  // check fires too early — right after setPlayingDigestId(id), tts.playing
+  // is still false (it flips to true only once audio.play() resolves), and
+  // the naive check would wipe the id before playback ever started.
+  const prevPlayingRef = useRef(false);
   useEffect(() => {
-    if (!tts.playing && playingDigestId) setPlayingDigestId(null);
+    if (prevPlayingRef.current && !tts.playing && playingDigestId) {
+      setPlayingDigestId(null);
+    }
+    prevPlayingRef.current = tts.playing;
   }, [tts.playing, playingDigestId]);
 
   // Kick off background digestion for a queued candidate. The voice is the

@@ -188,8 +188,21 @@ export function useTTS({ history }) {
   // Shares the mainAudio slot so the global Stop button still works and so
   // a new Speak preempts playback. Wires up timeupdate/loadedmetadata so the
   // Queue view can render a scrub bar with pause + seek.
+  //
+  // We deliberately do NOT call clearMain() here: clearMain flips setPlaying
+  // to false, and downstream consumers that key on (tts.playing, externalId)
+  // — e.g. App.jsx's playingDigestId cleanup effect — would clear their
+  // bookkeeping during the brief window before audio.play() resolves. We
+  // dispose the previous audio in place and only flip setPlaying once the
+  // new audio is actually started.
   const playRaw = useCallback(async ({ wav, onEnded }) => {
-    clearMain();
+    sequenceToken.current++;
+    disposeAudio(mainAudio.current, mainUrl.current);
+    mainAudio.current = null;
+    mainUrl.current = null;
+    setPaused(false);
+    setCurrentTime(0);
+    setDuration(0);
     clearPreview();
     setError(null);
 
