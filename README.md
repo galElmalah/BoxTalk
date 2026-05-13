@@ -167,6 +167,31 @@ See `apps/desktop/README.md` for what each test covers, and `apps/extension/READ
 - [ ] More languages — Kokoro supports Japanese, Mandarin, Spanish, French, Hindi, Italian, Portuguese.
 - [ ] "Summarize then read" mode driven by a local LLM in the extension.
 
+## Landing site
+
+The marketing site lives at `apps/sites/landing/` (Astro + Tailwind). It deploys to **Cloudflare Pages** as project `boxtalk` — currently reachable at https://boxtalk.pages.dev/.
+
+`.github/workflows/deploy-landing.yml` redeploys whenever:
+
+- `apps/sites/landing/**` (or the lockfile / workflow file) changes on `main`
+- A GitHub release is published — so the landing's build-time fetch of `releases/latest` picks up the new version + DMG link
+
+For CI deploys you need two repo secrets (Settings → Secrets and variables → Actions):
+
+| Secret                  | Value                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------ |
+| `CLOUDFLARE_API_TOKEN`  | Create at https://dash.cloudflare.com/profile/api-tokens with the **Cloudflare Pages — Edit** template (or a custom token with `Account.Cloudflare Pages: Edit`), scoped to the *Accomplish* account. |
+| `CLOUDFLARE_ACCOUNT_ID` | `ab43a89c284963fce47460305a945611` (run `wrangler whoami` to reconfirm)                          |
+
+Deploy manually from a local checkout with:
+
+```bash
+pnpm -F @boxtalk/site build
+npx wrangler pages deploy apps/sites/landing/dist --project-name=boxtalk --branch=main
+```
+
+To attach the `boxtalk.dev` custom domain, first add the zone to Cloudflare (Add Site flow), then in the Pages dashboard go to *boxtalk → Custom domains → Set up a custom domain → boxtalk.dev*.
+
 ## Releasing
 
 Tag pushes trigger the macOS release build via `.github/workflows/release.yml`:
