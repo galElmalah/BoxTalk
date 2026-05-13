@@ -1,7 +1,7 @@
 // Launch BoxTalk in Electron via Playwright and screenshot each view.
 // Output: <repoRoot>/docs/screenshots/{queue,general,model,history,speak}.png
 //
-// Run: node packages/app/tests/screenshots.mjs
+// Run: node apps/desktop/tests/screenshots.mjs
 
 import { _electron as electron } from "playwright-core";
 import path from "node:path";

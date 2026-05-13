@@ -1,0 +1,38 @@
+---
+import Layout from "../layouts/Layout.astro";
+import AsciiFlow from "../components/AsciiFlow.astro";
+---
+
+<Layout>
+  <main class="mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-6 py-24 text-center">
+    <AsciiFlow class="mb-10" />
+    <p class="mb-6 text-xs tracking-widest text-brand-purple uppercase" style="font-family: var(--font-pixel)">
+      BoxTalk · v0
+    </p>
+    <h1 class="text-4xl leading-tight text-brand-ink sm:text-5xl" style="font-family: var(--font-pixel)">
+      Your browser, <span class="text-brand-pink">out loud.</span>
+    </h1>
+    <p class="mt-6 max-w-2xl text-lg text-brand-ink/70">
+      Multi-engine local text-to-speech, paired with a Chrome extension that
+      pipes any page or selection to your desktop. Pick your engine —
+      <span class="font-semibold text-brand-ink">Kokoro</span> for speed,
+      <span class="font-semibold text-brand-ink">VibeVoice</span> for fidelity.
+      No cloud, no API key, no telemetry.
+    </p>
+
+    <div class="mt-10 flex flex-wrap items-center justify-center gap-3">
+      <a
+        href="https://github.com/galElmalah/BoxTalk/releases"
+        class="rounded-md bg-brand-pink px-5 py-3 text-sm font-semibold text-white shadow-[4px_4px_0_0_var(--color-brand-purple)] transition hover:-translate-y-[1px]"
+      >
+        Download for macOS
+      </a>
+      <a
+        href="https://github.com/galElmalah/BoxTalk"
+        class="rounded-md border-2 border-brand-purple px-5 py-3 text-sm font-semibold text-brand-purple transition hover:bg-brand-purple-soft"
+      >
+        View on GitHub
+      </a>
+    </div>
+  </main>
+</Layout>

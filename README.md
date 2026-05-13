@@ -19,12 +19,14 @@ Most "read this article aloud" tools either ship audio to a cloud API or use the
 └──────────────────────────┘                    └───────────────────────────┘
 ```
 
-Both halves are in this monorepo:
+Both halves, plus the marketing site, live in this monorepo:
 
 ```
-packages/
-  app/         Electron + React desktop app (TTS engine + UI)
+apps/
+  desktop/     Electron + React desktop app (TTS engine + UI)
   extension/   MV3 Chrome extension (selection / page → desktop bridge)
+  sites/
+    landing/   Astro marketing site (boxtalk.dev)
 ```
 
 ## Install
@@ -43,7 +45,7 @@ pnpm start        # builds the renderer and launches Electron
 You'll need Node 20+ and [pnpm](https://pnpm.io/). To produce a distributable DMG:
 
 ```bash
-pnpm dist:mac     # writes packages/app/release/*.dmg
+pnpm dist:mac     # writes apps/desktop/release/*.dmg
 ```
 
 ### 2. Load the Chrome extension
@@ -51,7 +53,7 @@ pnpm dist:mac     # writes packages/app/release/*.dmg
 The extension isn't on the Chrome Web Store yet — load it as an unpacked extension:
 
 1. Open `chrome://extensions` and toggle **Developer mode** on.
-2. Click **Load unpacked** and pick `packages/extension/` from this repo.
+2. Click **Load unpacked** and pick `apps/extension/` from this repo.
 3. In the BoxTalk app, open **General → Browser extension** and copy the pairing token.
 4. Click the extension's toolbar icon → **Settings** → paste the token → **Save**.
 
@@ -137,7 +139,7 @@ To enable VibeVoice you need to build the `vibevoice-cli` binary once:
 pnpm build:vibevoice   # clones localai-org/vibevoice.cpp into vendor/ and builds
 ```
 
-That writes the CLI to `packages/app/vendor/vibevoice.cpp/build/bin/vibevoice-cli`, which the app auto-detects. After that, open the **Model** tab in BoxTalk → click *Load* on **VibeVoice Realtime 0.5B** — the GGUFs (~2 GB) are pulled from `mudler/vibevoice.cpp-models` into the app's user-data dir, then you can pick Carter or Emma as your voice. The 1.5B and 7B cards show a friendly error until you point them at converted weights (see `packages/app/vibevoice.js`).
+That writes the CLI to `apps/desktop/vendor/vibevoice.cpp/build/bin/vibevoice-cli`, which the app auto-detects. After that, open the **Model** tab in BoxTalk → click *Load* on **VibeVoice Realtime 0.5B** — the GGUFs (~2 GB) are pulled from `mudler/vibevoice.cpp-models` into the app's user-data dir, then you can pick Carter or Emma as your voice. The 1.5B and 7B cards show a friendly error until you point them at converted weights (see `apps/desktop/vibevoice.js`).
 
 Bundled distributions of BoxTalk include the prebuilt `vibevoice-cli` so end-users don't have to compile it themselves.
 
@@ -149,7 +151,7 @@ pnpm e2e      # full UI flow via Playwright + Electron
 pnpm test     # smoke + e2e
 ```
 
-See `packages/app/README.md` for what each test covers, and `packages/extension/README.md` for loading + debugging the extension.
+See `apps/desktop/README.md` for what each test covers, and `apps/extension/README.md` for loading + debugging the extension.
 
 ## Roadmap
 

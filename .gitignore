@@ -6,6 +6,12 @@ vendor/
 *.log
 
 # Chrome extension signing key — keep local, never publish.
-packages/extension/*.pem
+apps/extension/*.pem
 # electron-builder output
 release/
+# Astro generated types
+.astro/
+# Env files
+.env
+.env.*
+!.env.example

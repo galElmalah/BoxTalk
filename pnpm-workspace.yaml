@@ -1,9 +1,11 @@
 packages:
-  - "packages/*"
+  - "apps/*"
+  - "apps/sites/*"
 
 allowBuilds:
   electron: true
   electron-winstaller: false
+  esbuild: true
   onnxruntime-node: true
   protobufjs: true
   sharp: true

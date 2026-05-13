@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-pink: #ff4fb5;
+  --color-brand-pink-soft: #ffd6ec;
+  --color-brand-purple: #7c3aed;
+  --color-brand-purple-soft: #ede4ff;
+  --color-brand-ink: #1a0b2e;
+  --color-brand-paper: #ffffff;
+
+  --font-pixel: "Press Start 2P", ui-monospace, monospace;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  background: var(--color-brand-paper);
+  color: var(--color-brand-ink);
+  font-family: var(--font-sans);
+}

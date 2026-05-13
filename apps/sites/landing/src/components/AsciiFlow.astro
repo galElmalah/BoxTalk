@@ -1,0 +1,147 @@
+---
+interface Props {
+  class?: string;
+}
+const { class: className = "" } = Astro.props;
+
+const inputPhrase = "the quick brown fox jumps over the lazy dog · hello world · text to speech · ";
+const inputText = inputPhrase.repeat(6);
+
+// 4-line ASCII sine wave. Period = 12 chars, repeated 5 times = 60 chars per copy.
+// Peaks above midline (─), troughs below.
+const wavePeriod = {
+  l1: "   __       ",
+  l2: "  /  \\      ",
+  l3: "─/────\\─────",
+  l4: "       \\__/ ",
+};
+const reps = 5;
+const waveBlock = [
+  wavePeriod.l1.repeat(reps),
+  wavePeriod.l2.repeat(reps),
+  wavePeriod.l3.repeat(reps),
+  wavePeriod.l4.repeat(reps),
+].join("\n");
+
+// Compact CRT computer — adapted from public ASCII art collections
+// (asciiart.eu/computers, ascii.co.uk/art/computer). Eight lines, ~18 chars wide.
+const computer = `   .-------------.
+   |.-----------.|
+   ||           ||
+   ||           ||
+   ||           ||
+   |"-----------'|
+   '-------------'
+       .------.
+       '------'`;
+---
+
+<div
+  class={`ascii-flow ${className}`}
+  role="img"
+  aria-label="Text streams into a computer from the left; voice waves emerge to the right."
+>
+  <!-- Incoming text stream -->
+  <div class="strip strip-in" aria-hidden="true">
+    <div class="track track-in">
+      <span class="seg">{inputText}</span>
+      <span class="seg">{inputText}</span>
+    </div>
+  </div>
+
+  <!-- Computer in the middle -->
+  <pre class="computer" aria-hidden="true">{computer}</pre>
+
+  <!-- Outgoing voice waves -->
+  <div class="strip strip-out" aria-hidden="true">
+    <div class="track track-out">
+      <pre class="wave-block">{waveBlock}</pre>
+      <pre class="wave-block">{waveBlock}</pre>
+    </div>
+  </div>
+</div>
+
+<style>
+  .ascii-flow {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 820px;
+    margin-inline: auto;
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.15;
+    color: var(--color-brand-purple);
+    user-select: none;
+  }
+
+  .strip {
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .strip-in {
+    height: 1.3em;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 45%, black 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 45%, black 100%);
+  }
+
+  .strip-out {
+    height: 4.8em;
+    -webkit-mask-image: linear-gradient(to right, black 0%, black 55%, transparent 100%);
+    mask-image: linear-gradient(to right, black 0%, black 55%, transparent 100%);
+  }
+
+  .track {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    will-change: transform;
+  }
+
+  .track-in {
+    color: var(--color-brand-pink);
+    animation: marquee-right 32s linear infinite;
+  }
+
+  .track-out {
+    color: var(--color-brand-pink);
+    animation: marquee-right 12s linear infinite;
+  }
+
+  .seg {
+    white-space: nowrap;
+  }
+
+  .wave-block {
+    margin: 0;
+    color: var(--color-brand-pink);
+    white-space: pre;
+    line-height: 1.15;
+    font-weight: 600;
+  }
+
+  .computer {
+    margin: 0;
+    color: var(--color-brand-purple);
+    line-height: 1.0;
+    white-space: pre;
+    font-weight: 700;
+  }
+
+  @keyframes marquee-right {
+    from { transform: translateX(-50%); }
+    to   { transform: translateX(0%); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .track-in, .track-out { animation: none; }
+  }
+
+  @media (max-width: 640px) {
+    .ascii-flow { font-size: 11px; }
+    .strip-out { height: 4.6em; }
+  }
+</style>

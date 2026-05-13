@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Copy Readability.js out of node_modules into vendor/ so the unpacked
 // extension can ship it as a content-script asset. MV3 disallows references
-// outside the extension root, so this file MUST live under packages/extension/.
+// outside the extension root, so this file MUST live under apps/extension/.
 
 import { mkdirSync, copyFileSync, existsSync } from "node:fs";
 import path from "node:path";

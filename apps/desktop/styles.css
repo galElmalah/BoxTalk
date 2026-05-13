@@ -63,13 +63,15 @@ button {
 }
 
 .app-name {
-  font-family: "Bricolage Grotesque", "Inter", sans-serif;
-  font-weight: 700;
-  font-size: 20px;
-  letter-spacing: -0.02em;
-  margin: 0 4px;
+  font-family: "Press Start 2P", ui-monospace, monospace;
+  font-weight: 400;
+  font-size: 13px;
+  letter-spacing: 0;
+  margin: 4px 4px 6px;
   color: var(--pink);
-  line-height: 1;
+  line-height: 1.1;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: auto;
 }
 
 .sidebar nav {
