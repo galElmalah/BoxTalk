@@ -181,7 +181,7 @@ For CI deploys you need two repo secrets (Settings → Secrets and variables →
 | Secret                  | Value                                                                                            |
 | ----------------------- | ------------------------------------------------------------------------------------------------ |
 | `CLOUDFLARE_API_TOKEN`  | Create at https://dash.cloudflare.com/profile/api-tokens with the **Cloudflare Pages — Edit** template (or a custom token with `Account.Cloudflare Pages: Edit`), scoped to the *Accomplish* account. |
-| `CLOUDFLARE_ACCOUNT_ID` | `ab43a89c284963fce47460305a945611` (run `wrangler whoami` to reconfirm)                          |
+| `CLOUDFLARE_ACCOUNT_ID` | `2b0122c5ca74870ca33ce676ea66490e` (galelmalah@gmail.com's account; `wrangler whoami` to reconfirm) |
 
 Deploy manually from a local checkout with:
 
