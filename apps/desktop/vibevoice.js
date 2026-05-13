@@ -9,11 +9,17 @@
 //   generate(...) — spawns `vibevoice-cli tts ...` with the cached files,
 //                   reads the output WAV, returns it.
 //
-// The CLI binary must be built from source once (see scripts/build-vibevoice.mjs).
-// We resolve its path in this order:
+// The CLI binary is acquired on demand the first time a VibeVoice model is
+// loaded. Resolution order:
 //   1. process.env.VIBEVOICE_CLI
-//   2. <repo>/vendor/vibevoice.cpp/build/bin/vibevoice-cli
-//   3. `vibevoice-cli` on PATH
+//   2. <userDataDir>/vibevoice/bin/vibevoice-cli  (downloaded from a BoxTalk
+//      release that bundles a CLI for this platform+arch)
+//   3. <repo>/vendor/vibevoice.cpp/build/bin/vibevoice-cli  (dev: built locally)
+//   4. `vibevoice-cli` on PATH
+//
+// On miss, ensureBinary() first attempts to download a prebuilt for the
+// current platform+arch from the latest BoxTalk release, and falls back to
+// cloning + building vibevoice.cpp from source if the download is unavailable.
 //
 // Only Realtime-0.5B is supported with pre-published GGUFs today (Carter +
 // Emma voices). 1.5B and 7B require manual conversion of the upstream
@@ -30,6 +36,9 @@ const os = require("node:os");
 const HF_REPO = "mudler/vibevoice.cpp-models";
 const HF_BASE = `https://huggingface.co/${HF_REPO}/resolve/main`;
 const VIBEVOICE_REPO = "https://github.com/localai-org/vibevoice.cpp";
+
+// BoxTalk release that ships prebuilt vibevoice-cli binaries as assets.
+const BOXTALK_RELEASES = "https://github.com/galElmalah/BoxTalk/releases";
 
 // Per-model dispatch table. `files` lists the GGUFs we download; `voices`
 // maps UI voice ids → voice-gguf filename (realtime path uses pre-baked
@@ -74,6 +83,7 @@ class VibeVoiceBackend {
   constructor({ userDataDir, onProgress }) {
     this.modelsDir = path.join(userDataDir, "vibevoice", "models");
     this.tmpDir = path.join(userDataDir, "vibevoice", "tmp");
+    this.binDir = path.join(userDataDir, "vibevoice", "bin");
     this.onProgress = onProgress;
     this.cliPath = null; // resolved on first use
   }
@@ -91,12 +101,11 @@ class VibeVoiceBackend {
     if (this.cliPath) return this.cliPath;
 
     const candidates = [
-      // Honor explicit override first.
+      // Explicit override (dev convenience).
       process.env.VIBEVOICE_CLI,
-      // Packaged: electron-builder's extraResources copies the binary under
-      // Contents/Resources/. process.resourcesPath only exists in a packaged app.
-      process.resourcesPath ? path.join(process.resourcesPath, "vibevoice-cli") : null,
-      // Dev: built from source into ./vendor/.
+      // Downloaded from a BoxTalk release on first use.
+      path.join(this.binDir, "vibevoice-cli"),
+      // Dev: built from source under ./vendor/.
       path.join(__dirname, "vendor", "vibevoice.cpp", "build", "bin", "vibevoice-cli"),
     ].filter(Boolean);
 
@@ -107,14 +116,94 @@ class VibeVoiceBackend {
       }
     }
 
-    // Final fallback: PATH lookup. Don't memoize — if the user builds the
+    // Final fallback: PATH lookup. Don't memoize — if the user installs the
     // binary while the app is running, the next call should pick it up.
     return "vibevoice-cli";
   }
 
-  // Clone + build vibevoice.cpp under ./vendor/ if the binary is missing.
+  // Acquire vibevoice-cli on demand:
+  //   1. If a usable binary is already resolvable, return it.
+  //   2. Download a prebuilt for this platform+arch from the latest BoxTalk
+  //      release.
+  //   3. Fall back to cloning + building vibevoice.cpp from source.
   // Streams progress to onProgress so the model card shows what's happening.
   async ensureBinary(modelId) {
+    const resolved = this.resolveCli();
+    if (resolved !== "vibevoice-cli") return resolved;
+
+    const assetName = `vibevoice-cli-${process.platform}-${process.arch}`;
+    const url = `${BOXTALK_RELEASES}/latest/download/${assetName}`;
+
+    try {
+      return await this.downloadCli({ modelId, url, assetName });
+    } catch (downloadErr) {
+      // Building from source is a slower but offline-friendly fallback.
+      try {
+        return await this.buildFromSource(modelId);
+      } catch (buildErr) {
+        throw new Error(
+          `vibevoice-cli is not installed and could not be fetched for ` +
+          `${process.platform}-${process.arch}.\n\n` +
+          `Download from ${url}\n  → ${downloadErr.message}\n\n` +
+          `Build from source\n  → ${buildErr.message}`,
+        );
+      }
+    }
+  }
+
+  // Pull a prebuilt vibevoice-cli for this platform+arch from a BoxTalk
+  // release asset, cache it to <userData>/vibevoice/bin/, mark it executable.
+  async downloadCli({ modelId, url, assetName }) {
+    await fsp.mkdir(this.binDir, { recursive: true });
+    const target = path.join(this.binDir, "vibevoice-cli");
+    const tmp = target + ".part";
+
+    this.onProgress?.(modelId, {
+      stage: "downloading vibevoice-cli",
+      file: assetName,
+      progress: null,
+    });
+
+    const res = await fetch(url, { redirect: "follow" });
+    if (!res.ok || !res.body) {
+      throw new Error(`fetch ${url} → ${res.status}`);
+    }
+
+    const totalBytes = Number(res.headers.get("content-length")) || 0;
+    let loaded = 0;
+    const reportEvery = Math.max(64 * 1024, Math.floor(totalBytes / 200));
+    let nextReport = reportEvery;
+
+    const reporter = new TransformStream({
+      transform: (chunk, controller) => {
+        loaded += chunk.byteLength;
+        if (loaded >= nextReport || (totalBytes && loaded === totalBytes)) {
+          nextReport += reportEvery;
+          this.onProgress?.(modelId, {
+            stage: "downloading vibevoice-cli",
+            file: assetName,
+            loaded,
+            total: totalBytes,
+            progress: totalBytes ? (loaded / totalBytes) * 100 : null,
+          });
+        }
+        controller.enqueue(chunk);
+      },
+    });
+
+    await pipeline(
+      Readable.fromWeb(res.body.pipeThrough(reporter)),
+      fs.createWriteStream(tmp),
+    );
+    await fsp.chmod(tmp, 0o755);
+    await fsp.rename(tmp, target);
+    this.cliPath = target;
+    return target;
+  }
+
+  // Clone + build vibevoice.cpp under ./vendor/ — used as the fallback when
+  // no prebuilt is available for this platform+arch.
+  async buildFromSource(modelId) {
     const target = path.join(__dirname, "vendor", "vibevoice.cpp", "build", "bin", "vibevoice-cli");
     if (fs.existsSync(target)) {
       this.cliPath = target;
@@ -126,8 +215,7 @@ class VibeVoiceBackend {
     for (const tool of ["git", "cmake", "make"]) {
       if (!(await onPath(tool))) {
         throw new Error(
-          `${tool} not found on PATH. The VibeVoice backend builds from source the ` +
-          `first time you load a model. Install Xcode Command Line Tools ` +
+          `${tool} not found on PATH. Install Xcode Command Line Tools ` +
           `(\`xcode-select --install\`) or your platform's equivalent.`,
         );
       }

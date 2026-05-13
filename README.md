@@ -133,15 +133,20 @@ BoxTalk ships with two TTS engines. Kokoro is on by default; VibeVoice is opt-in
 | **VibeVoice 1.5B**          | ~6 GB   | Up to 4 speakers, voice cloning from reference audio          | Requires manual conversion of upstream weights                       |
 | **VibeVoice Large 7B**      | ~14 GB  | Highest fidelity, ModelScope mirror                           | Requires manual conversion of upstream weights                       |
 
-To enable VibeVoice you need to build the `vibevoice-cli` binary once:
+VibeVoice is entirely on-demand. Nothing about it ships in the DMG. The first time you click *Load* on **VibeVoice Realtime 0.5B** in the **Model** tab, BoxTalk pulls two things into the app's user-data dir:
+
+1. **`vibevoice-cli`** — a prebuilt binary for your platform+arch, downloaded from the matching BoxTalk release asset (e.g. `vibevoice-cli-darwin-arm64`). Cached at `<userData>/vibevoice/bin/vibevoice-cli`.
+2. **The GGUF weights** (~2 GB) — pulled from `mudler/vibevoice.cpp-models` on Hugging Face. Cached at `<userData>/vibevoice/models/`.
+
+If no prebuilt is published for your platform yet (or you're offline), BoxTalk falls back to cloning + compiling `localai-org/vibevoice.cpp` locally — requires Xcode Command Line Tools or your platform's equivalent (`git`, `cmake`, `make`).
+
+To build the CLI manually for development:
 
 ```bash
 pnpm build:vibevoice   # clones localai-org/vibevoice.cpp into vendor/ and builds
 ```
 
-That writes the CLI to `apps/desktop/vendor/vibevoice.cpp/build/bin/vibevoice-cli`, which the app auto-detects. After that, open the **Model** tab in BoxTalk → click *Load* on **VibeVoice Realtime 0.5B** — the GGUFs (~2 GB) are pulled from `mudler/vibevoice.cpp-models` into the app's user-data dir, then you can pick Carter or Emma as your voice. The 1.5B and 7B cards show a friendly error until you point them at converted weights (see `apps/desktop/vibevoice.js`).
-
-Bundled distributions of BoxTalk include the prebuilt `vibevoice-cli` so end-users don't have to compile it themselves.
+The 1.5B and 7B cards show a friendly error until you point them at converted weights (see `apps/desktop/vibevoice.js`).
 
 ## Tests
 

@@ -18,7 +18,7 @@ jobs:
   build-mac:
     name: Build (macOS)
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,11 +37,33 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # --- Desktop app (DMG) -------------------------------------------------
+
       - name: Build desktop app
         run: pnpm -F @boxtalk/app dist:mac
         env:
           # Unsigned build — electron-builder skips notarization when identity is null
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      # --- vibevoice-cli (downloaded on demand by the desktop app) ----------
+      #
+      # The DMG ships without VibeVoice. The desktop app pulls this binary from
+      # the matching release asset the first time a user loads a VibeVoice
+      # model (see apps/desktop/vibevoice.js). Build it here so the release
+      # carries one prebuilt per arch.
+
+      - name: Build vibevoice-cli
+        run: node apps/desktop/scripts/build-vibevoice.mjs
+
+      - name: Stage vibevoice-cli as release asset
+        run: |
+          src=apps/desktop/vendor/vibevoice.cpp/build/bin/vibevoice-cli
+          dest=apps/desktop/release/vibevoice-cli-darwin-$(uname -m)
+          cp "$src" "$dest"
+          chmod +x "$dest"
+          ls -la apps/desktop/release/
+
+      # --- Upload + release --------------------------------------------------
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -52,6 +74,7 @@ jobs:
             apps/desktop/release/*.zip
             apps/desktop/release/*.blockmap
             apps/desktop/release/latest-mac.yml
+            apps/desktop/release/vibevoice-cli-*
           if-no-files-found: error
 
       - name: Create GitHub release
@@ -60,8 +83,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd apps/desktop/release
-          # Glob may not match latest-mac.yml on first run; ignore if absent.
-          assets=( *.dmg *.zip )
+          assets=( *.dmg *.zip vibevoice-cli-* )
           [[ -f latest-mac.yml ]] && assets+=( latest-mac.yml )
           gh release create "${GITHUB_REF_NAME}" \
             --title "BoxTalk ${GITHUB_REF_NAME}" \

@@ -46,13 +46,7 @@
       "!tests/**/*",
       "!scripts/**/*",
       "!**/.cache/**",
-      "!vendor/vibevoice.cpp/{.git,build/.cmake,third_party/ggml/build}/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "vendor/vibevoice.cpp/build/bin/vibevoice-cli",
-        "to": "vibevoice-cli"
-      }
+      "!vendor/**/*"
     ],
     "asarUnpack": [
       "**/node_modules/onnxruntime-node/**/*"
