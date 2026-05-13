@@ -1,13 +1,40 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import AsciiFlow from "../components/AsciiFlow.astro";
+
+const REPO = "galElmalah/BoxTalk";
+const RELEASES_URL = `https://github.com/${REPO}/releases`;
+
+type ReleaseAsset = { name: string; browser_download_url: string };
+type Release = { tag_name: string; html_url: string; assets: ReleaseAsset[] };
+
+let release: Release | null = null;
+try {
+  const headers: Record<string, string> = {
+    "User-Agent": "boxtalk-landing",
+    Accept: "application/vnd.github+json",
+  };
+  if (import.meta.env.GITHUB_TOKEN) {
+    headers.Authorization = `Bearer ${import.meta.env.GITHUB_TOKEN}`;
+  }
+  const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers });
+  if (res.ok) {
+    release = await res.json();
+  }
+} catch {
+  /* Build-time fetch failures fall back to the releases listing. */
+}
+
+const dmgAsset = release?.assets?.find((a) => a.name.endsWith(".dmg"));
+const downloadUrl = dmgAsset?.browser_download_url ?? `${RELEASES_URL}/latest`;
+const version = release?.tag_name ?? null;
 ---
 
 <Layout>
   <main class="mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-6 py-24 text-center">
     <AsciiFlow class="mb-10" />
     <p class="mb-6 text-xs tracking-widest text-brand-purple uppercase" style="font-family: var(--font-pixel)">
-      BoxTalk · v0
+      BoxTalk{version ? ` · ${version}` : " · v0"}
     </p>
     <h1 class="text-4xl leading-tight text-brand-ink sm:text-5xl" style="font-family: var(--font-pixel)">
       Your browser, <span class="text-brand-pink">out loud.</span>
@@ -22,17 +49,28 @@ import AsciiFlow from "../components/AsciiFlow.astro";
 
     <div class="mt-10 flex flex-wrap items-center justify-center gap-3">
       <a
-        href="https://github.com/galElmalah/BoxTalk/releases"
+        href={downloadUrl}
         class="rounded-md bg-brand-pink px-5 py-3 text-sm font-semibold text-white shadow-[4px_4px_0_0_var(--color-brand-purple)] transition hover:-translate-y-[1px]"
       >
-        Download for macOS
+        {dmgAsset ? `Download for macOS (${version})` : "Download for macOS"}
       </a>
       <a
-        href="https://github.com/galElmalah/BoxTalk"
+        href={`https://github.com/${REPO}`}
         class="rounded-md border-2 border-brand-purple px-5 py-3 text-sm font-semibold text-brand-purple transition hover:bg-brand-purple-soft"
       >
         View on GitHub
       </a>
     </div>
+
+    {!release && (
+      <p class="mt-4 text-xs text-brand-ink/50">
+        No release published yet — push a <code class="rounded bg-brand-pink-soft px-1.5 py-0.5 text-brand-purple">v*</code> tag to trigger the build.
+      </p>
+    )}
+
+    <p class="mt-10 max-w-md text-xs text-brand-ink/50">
+      Unsigned build — on first launch macOS will warn; right-click the app and choose <em>Open</em>, or run
+      <code class="rounded bg-brand-pink-soft px-1.5 py-0.5 text-brand-purple">xattr -dr com.apple.quarantine /Applications/BoxTalk.app</code>.
+    </p>
   </main>
 </Layout>

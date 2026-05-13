@@ -162,6 +162,20 @@ See `apps/desktop/README.md` for what each test covers, and `apps/extension/READ
 - [ ] More languages — Kokoro supports Japanese, Mandarin, Spanish, French, Hindi, Italian, Portuguese.
 - [ ] "Summarize then read" mode driven by a local LLM in the extension.
 
+## Releasing
+
+Tag pushes trigger the macOS release build via `.github/workflows/release.yml`:
+
+```bash
+# Bump version in apps/desktop/package.json first, then:
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+CI runs on `macos-latest`, builds the unsigned DMG via `pnpm -F @boxtalk/app dist:mac`, and uploads it to a GitHub release named after the tag. The landing site (`apps/sites/landing`) reads `releases/latest` at build time and links the DMG directly. To dry-run the build without publishing, use the workflow's `workflow_dispatch` trigger.
+
+The build is unsigned (`identity: null` in electron-builder config), so first-launch users need to right-click the app → *Open*, or run `xattr -dr com.apple.quarantine /Applications/BoxTalk.app`.
+
 ## License
 
 MIT.
