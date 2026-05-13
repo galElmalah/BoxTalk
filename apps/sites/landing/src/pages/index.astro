@@ -68,9 +68,24 @@ const version = release?.tag_name ?? null;
       </p>
     )}
 
-    <p class="mt-10 max-w-md text-xs text-brand-ink/50">
-      Unsigned build — on first launch macOS will warn; right-click the app and choose <em>Open</em>, or run
-      <code class="rounded bg-brand-pink-soft px-1.5 py-0.5 text-brand-purple">xattr -dr com.apple.quarantine /Applications/BoxTalk.app</code>.
-    </p>
+    <section class="mt-14 max-w-xl text-left">
+      <h2 class="text-xs tracking-widest text-brand-purple uppercase" style="font-family: var(--font-pixel)">
+        After install
+      </h2>
+      <p class="mt-3 text-sm text-brand-ink/70">
+        The build is <strong>unsigned</strong>, so macOS Gatekeeper will say
+        <em>"BoxTalk is damaged and can't be opened"</em>. It isn't damaged —
+        that's just the message Apple Silicon shows for any app downloaded from
+        the web without an Apple Developer signature. Drag BoxTalk to
+        Applications first, then run this once in Terminal to clear the
+        quarantine flag:
+      </p>
+      <pre class="mt-3 overflow-x-auto rounded-md border border-brand-purple/20 bg-brand-pink-soft p-3 text-xs text-brand-purple"><code>xattr -dr com.apple.quarantine /Applications/BoxTalk.app</code></pre>
+      <p class="mt-3 text-xs text-brand-ink/50">
+        After that, BoxTalk launches normally and every future update too. The
+        right-click → <em>Open</em> trick does not help with the "is damaged"
+        variant on Apple Silicon.
+      </p>
+    </section>
   </main>
 </Layout>
