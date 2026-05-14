@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Electron + V8 require JIT and unsigned executable memory. -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+
+  <!-- onnxruntime-node + kokoro-js load unsigned dylibs from node_modules. -->
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+
+  <!-- Allow Electron to read DYLD_* env vars during dev/test. -->
+  <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+  <true/>
+
+  <!-- HuggingFace model downloads (Kokoro, VibeVoice GGUFs, vibevoice-cli). -->
+  <key>com.apple.security.network.client</key>
+  <true/>
+
+  <!-- Loopback HTTP bridge on 127.0.0.1:38219 for the Chrome extension. -->
+  <key>com.apple.security.network.server</key>
+  <true/>
+</dict>
+</plist>

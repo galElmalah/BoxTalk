@@ -55,7 +55,10 @@
       "category": "public.app-category.utilities",
       "target": ["dmg", "zip"],
       "icon": "build/icon.png",
-      "identity": null
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "dmg": {
       "icon": "build/icon.png"

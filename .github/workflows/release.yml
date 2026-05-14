@@ -42,8 +42,16 @@ jobs:
       - name: Build desktop app
         run: pnpm -F @boxtalk/app dist:mac
         env:
-          # Unsigned build — electron-builder skips notarization when identity is null
-          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          # Signing + notarization auto-enable as soon as CSC_LINK is set in
+          # repo secrets. Until then, electron-builder skips signing because
+          # we keep auto-discovery off so the macos-latest keychain isn't
+          # searched (it has no cert).
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' && 'true' || 'false' }}
 
       # --- vibevoice-cli (downloaded on demand by the desktop app) ----------
       #

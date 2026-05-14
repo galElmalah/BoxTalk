@@ -204,7 +204,25 @@ git push origin v0.1.0
 
 CI runs on `macos-latest`, builds the unsigned DMG via `pnpm -F @boxtalk/app dist:mac`, and uploads it to a GitHub release named after the tag. The landing site (`apps/sites/landing`) reads `releases/latest` at build time and links the DMG directly. To dry-run the build without publishing, use the workflow's `workflow_dispatch` trigger.
 
-The build is unsigned (`identity: null` in electron-builder config), so first-launch users need to right-click the app → *Open*, or run `xattr -dr com.apple.quarantine /Applications/BoxTalk.app`.
+### Signing + notarization
+
+The release workflow auto-signs and notarizes the DMG as soon as these five repo secrets exist (Settings → Secrets and variables → Actions):
+
+| Secret                        | How to get it                                                                 |
+| ----------------------------- | ----------------------------------------------------------------------------- |
+| `CSC_LINK`                    | base64 of a `Developer ID Application` `.p12` exported from Keychain Access. `base64 -i cert.p12 \| pbcopy`. |
+| `CSC_KEY_PASSWORD`            | The password set on the `.p12` during export.                                 |
+| `APPLE_ID`                    | Your Apple Developer account email.                                           |
+| `APPLE_APP_SPECIFIC_PASSWORD` | https://appleid.apple.com/account/manage → Sign-In and Security → App-Specific Passwords. |
+| `APPLE_TEAM_ID`               | https://developer.apple.com/account → Membership.                             |
+
+With all five present, the next tag push produces a properly signed + notarized DMG that opens with no Gatekeeper warning. The `xattr` instruction on the landing can be removed at that point.
+
+Without them, the build proceeds **unsigned**: first launch shows *"BoxTalk is damaged and can't be opened"* on Apple Silicon (a Gatekeeper false-positive). Users have to clear quarantine:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/BoxTalk.app
+```
 
 ## License
 
