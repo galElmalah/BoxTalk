@@ -347,6 +347,77 @@ ipcMain.handle("tts:generate", async (_e, { modelId = "kokoro", voice, text, spe
   return generateVibeVoice({ modelId, voice, text, speed, mode });
 });
 
+// ── Streaming TTS ─────────────────────────────────────────────────────
+// Per-sentence streaming. Renderer calls `tts:streamStart` with a clientId
+// it owns; main forwards a kokoro stream and broadcasts each segment back
+// as `tts:streamSegment` events keyed by that clientId. End/error events
+// signal completion. Cancellation is async — the renderer fires
+// `tts:streamCancel` and the worker checks its flag between segments.
+
+const activeStreams = new Map(); // clientId -> { cancel(): void, sender }
+
+function streamWavFromSamples(samples, samplingRate) {
+  return encodeWav(samples, samplingRate);
+}
+
+ipcMain.handle("tts:streamStart", async (event, { clientId, modelId = "kokoro", voice, text, speed }) => {
+  const cfg = MODELS[modelId];
+  if (!cfg) throw new Error("unknown model: " + modelId);
+  if (cfg.backend !== "kokoro") throw new Error("streaming only supported for kokoro");
+  if (modelStates[modelId].state !== "ready") throw new Error(`${modelId} not loaded`);
+  if (!text || typeof text !== "string") throw new Error("text required");
+  if (!voice || typeof voice !== "string") throw new Error("voice required");
+  if (!clientId || typeof clientId !== "string") throw new Error("clientId required");
+  if (activeStreams.has(clientId)) {
+    // Cancel any prior stream owned by the same clientId so a fresh Speak
+    // preempts the previous one cleanly.
+    try { activeStreams.get(clientId).cancel(); } catch {}
+    activeStreams.delete(clientId);
+  }
+
+  const sender = event.sender;
+  const safeSend = (channel, payload) => {
+    if (!sender.isDestroyed()) sender.send(channel, payload);
+  };
+
+  const stream = engines.kokoro.generateStream({
+    voice,
+    text,
+    speed,
+    onSegment: ({ segmentIndex, text: segText, samples, samplingRate }) => {
+      const wav = streamWavFromSamples(samples, samplingRate);
+      safeSend("tts:streamSegment", {
+        clientId,
+        segmentIndex,
+        text: segText,
+        wav,
+        samplingRate,
+        samples: samples.length,
+      });
+    },
+    onEnd: (info) => {
+      activeStreams.delete(clientId);
+      safeSend("tts:streamEnd", { clientId, ...info });
+    },
+    onError: (err) => {
+      activeStreams.delete(clientId);
+      safeSend("tts:streamError", { clientId, message: err?.message ?? String(err) });
+    },
+  });
+  activeStreams.set(clientId, stream);
+  // Resolve immediately; the actual work continues asynchronously and
+  // results stream back over the event channels above.
+  return { clientId, reqId: stream.reqId };
+});
+
+ipcMain.handle("tts:streamCancel", async (_e, { clientId }) => {
+  const stream = activeStreams.get(String(clientId));
+  if (!stream) return false;
+  try { stream.cancel(); } catch {}
+  activeStreams.delete(String(clientId));
+  return true;
+});
+
 ipcMain.handle("store:listHistory", () => stmts.listHistory.all());
 
 ipcMain.handle("store:addHistory", (_e, entry) => {
@@ -408,8 +479,8 @@ ipcMain.handle("bridge:getToken", () => getOrCreateBridgeToken());
 // candidate's text up front and persisting one merged WAV to disk; once
 // digested the candidate is a one-click playback in the Queue view.
 
-const CHUNK_TARGET = 600;
-const CHUNK_HARD_LIMIT = 1200;
+const CHUNK_TARGET = 1800;
+const CHUNK_HARD_LIMIT = 2000;
 
 function chunkText(text) {
   const cleaned = (text || "").replace(/\r\n/g, "\n").trim();

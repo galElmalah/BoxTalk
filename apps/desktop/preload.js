@@ -12,6 +12,64 @@ function subscribable(channel) {
 
 contextBridge.exposeInMainWorld("tts", {
   generate: (args) => ipcRenderer.invoke("tts:generate", args),
+
+  // Per-sentence streaming. The renderer hands in callbacks; preload wires
+  // them to the main-process events for this specific clientId so multiple
+  // callers (or rapid Speak/Stop cycles) don't cross-talk.
+  //
+  // Returns { cancel(): Promise<void>, done: Promise<{segmentCount,totalSynthMs,canceled}> }.
+  stream: ({ modelId, voice, text, speed, mode, onSegment, onEnd, onError } = {}) => {
+    const clientId = `s-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    let donePromiseResolve, donePromiseReject;
+    const done = new Promise((resolve, reject) => {
+      donePromiseResolve = resolve;
+      donePromiseReject = reject;
+    });
+
+    const offSegment = (_e, payload) => {
+      if (!payload || payload.clientId !== clientId) return;
+      try { onSegment?.(payload); } catch (err) { console.error("[tts.stream] onSegment:", err); }
+    };
+    const offEnd = (_e, payload) => {
+      if (!payload || payload.clientId !== clientId) return;
+      cleanup();
+      try { onEnd?.(payload); } catch (err) { console.error("[tts.stream] onEnd:", err); }
+      donePromiseResolve(payload);
+    };
+    const offError = (_e, payload) => {
+      if (!payload || payload.clientId !== clientId) return;
+      cleanup();
+      const err = new Error(payload.message || "tts stream error");
+      try { onError?.(err); } catch (e) { console.error("[tts.stream] onError:", e); }
+      donePromiseReject(err);
+    };
+    function cleanup() {
+      ipcRenderer.off("tts:streamSegment", offSegment);
+      ipcRenderer.off("tts:streamEnd", offEnd);
+      ipcRenderer.off("tts:streamError", offError);
+    }
+    ipcRenderer.on("tts:streamSegment", offSegment);
+    ipcRenderer.on("tts:streamEnd", offEnd);
+    ipcRenderer.on("tts:streamError", offError);
+
+    const startPromise = ipcRenderer.invoke("tts:streamStart", {
+      clientId, modelId, voice, text, speed, mode,
+    }).catch((err) => {
+      cleanup();
+      donePromiseReject(err);
+    });
+
+    return {
+      clientId,
+      done,
+      cancel: async () => {
+        try { await ipcRenderer.invoke("tts:streamCancel", { clientId }); } catch {}
+      },
+      // Internal: surface the start invoke so callers that want to know
+      // when the worker accepted the stream can await it.
+      started: startPromise,
+    };
+  },
 });
 
 contextBridge.exposeInMainWorld("models", {

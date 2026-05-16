@@ -3,17 +3,27 @@
 // kills only this worker — the main process respawns it and the user-facing
 // app stays alive.
 //
-// Protocol (JSON over parentPort message channel):
+// Protocol (structured-cloned over parentPort message channel):
 //   parent → worker:
-//     { type: "load",     reqId, hfId, dtype, device }
-//     { type: "generate", reqId, voice, text, speed }
+//     { type: "load",          reqId, hfId, dtype, device }
+//     { type: "generate",      reqId, voice, text, speed }
+//     { type: "stream",        reqId, voice, text, speed }
+//     { type: "stream-cancel", reqId }
 //   worker → parent:
-//     { type: "ready",    reqId }
-//     { type: "progress", reqId, data }   (model download progress)
-//     { type: "result",   reqId, wav, samplingRate, samples, synthMs }
-//     { type: "error",    reqId, message }
+//     { type: "ready",          reqId }
+//     { type: "progress",       reqId, data }
+//     { type: "result",         reqId, sampleBytes, sampleCount, samplingRate, synthMs }
+//     { type: "stream-segment", reqId, segmentIndex, text,
+//                               sampleBytes, sampleCount, samplingRate, synthMs }
+//     { type: "stream-end",     reqId, segmentCount, totalSynthMs, canceled }
+//     { type: "error",          reqId, message }
 
 let tts = null;
+let TextSplitterStream = null;
+// Active streams keyed by reqId. Each entry is { canceled: bool }. The
+// generate loop checks .canceled between segments so an in-flight stream
+// can stop early without killing the process.
+const activeStreams = new Map();
 
 function send(msg) {
   process.parentPort?.postMessage(msg);
@@ -36,12 +46,13 @@ async function handle(msg) {
         env.localModelPath = msg.cacheDir;
         env.allowLocalModels = true;
       }
-      const { KokoroTTS } = await import("kokoro-js");
-      tts = await KokoroTTS.from_pretrained(msg.hfId, {
+      const mod = await import("kokoro-js");
+      tts = await mod.KokoroTTS.from_pretrained(msg.hfId, {
         dtype: msg.dtype || "q8",
         device: msg.device || "cpu",
         progress_callback: (data) => send({ type: "progress", reqId, data }),
       });
+      TextSplitterStream = mod.TextSplitterStream;
       send({ type: "ready", reqId });
       return;
     }
@@ -65,8 +76,74 @@ async function handle(msg) {
       return;
     }
 
+    if (type === "stream") {
+      if (!tts) throw new Error("kokoro not loaded");
+      if (!TextSplitterStream) throw new Error("TextSplitterStream missing — model not loaded?");
+
+      // Work around a kokoro-js bug: stream(string) builds an internal
+      // TextSplitterStream but never close()s it, so the last sentence
+      // hangs forever. Drive the splitter ourselves and close it.
+      const splitter = new TextSplitterStream();
+      splitter.push(msg.text);
+      splitter.close();
+
+      const state = { canceled: false };
+      activeStreams.set(reqId, state);
+
+      let segmentIndex = 0;
+      const tAll0 = Date.now();
+      try {
+        for await (const { text: segText, audio } of tts.stream(splitter, {
+          voice: msg.voice,
+          speed: msg.speed ?? 1,
+        })) {
+          if (state.canceled) break;
+          const tSeg = Date.now();
+          const buf = Buffer.from(
+            audio.audio.buffer,
+            audio.audio.byteOffset,
+            audio.audio.byteLength,
+          );
+          send({
+            type: "stream-segment",
+            reqId,
+            segmentIndex,
+            text: segText,
+            sampleBytes: buf,
+            sampleCount: audio.audio.length,
+            samplingRate: audio.sampling_rate,
+            // kokoro-js' iterator returns each yield after its synth completes,
+            // so tSeg measures send-time, not synth-time. We approximate
+            // per-segment synth as Date.now() - tAll0 - prior cumulative,
+            // but for clarity just send 0 here; main times round-trip itself
+            // if it cares. We do still send the cumulative total in stream-end.
+            synthMs: 0,
+            tSentAt: tSeg,
+          });
+          segmentIndex++;
+        }
+        send({
+          type: "stream-end",
+          reqId,
+          segmentCount: segmentIndex,
+          totalSynthMs: Date.now() - tAll0,
+          canceled: state.canceled,
+        });
+      } finally {
+        activeStreams.delete(reqId);
+      }
+      return;
+    }
+
+    if (type === "stream-cancel") {
+      const state = activeStreams.get(reqId);
+      if (state) state.canceled = true;
+      return;
+    }
+
     throw new Error("unknown message type: " + type);
   } catch (err) {
+    activeStreams.delete(reqId);
     send({ type: "error", reqId, message: err?.message ?? String(err) });
   }
 }

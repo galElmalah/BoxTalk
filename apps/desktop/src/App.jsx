@@ -6,6 +6,7 @@ import { useTTS } from "./hooks/useTTS.js";
 import { useQueue } from "./hooks/useQueue.js";
 import { usePersistedState } from "./hooks/usePersistedState.js";
 import { chunkText } from "./lib/chunkText.js";
+import { runBenchmark } from "./lib/benchmark.js";
 import { Sidebar } from "./components/Sidebar.jsx";
 import { SpeakView } from "./components/SpeakView.jsx";
 import { GeneralView } from "./components/GeneralView.jsx";
@@ -134,7 +135,8 @@ export function App() {
 
   // Chrome extension → main process → here. Resolve the voice (fall back to
   // current selection if the payload didn't specify one or specified an
-  // unknown one), chunk long text, and play through speakSequence.
+  // unknown one), then play through speakStream (kokoro) or fall back to
+  // chunked speakSequence (vibevoice, which doesn't have a stream API).
   useEffect(() => {
     if (!window.bridge) return;
     return window.bridge.onSpeak(({ text, source, voice }) => {
@@ -144,6 +146,16 @@ export function App() {
       const state = models.states[model.id];
       if (state?.state !== "ready") {
         tts.setError(`${model.label} not loaded — open the Model tab and load it before sending text.`);
+        return;
+      }
+      if (model.id === "kokoro") {
+        tts.speakStream({
+          modelId: model.id,
+          voice: voiceId,
+          text,
+          mode: models.runModes[model.id],
+          source: source || "Extension",
+        });
         return;
       }
       const chunks = chunkText(text);
@@ -193,6 +205,7 @@ export function App() {
       },
       getHistory: () => history.items.slice(),
       getSelectedVoice: () => selectedVoiceId,
+      benchmark: (opts) => runBenchmark(opts),
     };
   });
 

@@ -1,6 +1,6 @@
 {
   "name": "@boxtalk/app",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "BoxTalk Electron app — local TTS using Kokoro / VibeVoice",
   "main": "main.js",
@@ -12,6 +12,8 @@
     "dist:mac": "vite build && electron-builder --mac",
     "smoke": "vite build && node tests/smoke.mjs",
     "e2e": "vite build && node tests/e2e.mjs",
+    "bench": "vite build && node tests/benchmark.mjs",
+    "bench:synth": "node tests/bench-synth.mjs",
     "test": "pnpm run smoke && pnpm run e2e"
   },
   "devDependencies": {

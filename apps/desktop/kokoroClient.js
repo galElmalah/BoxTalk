@@ -21,6 +21,9 @@ class KokoroClient {
     this.loadOpts = null; // remembered so we can re-load after a crash
     this.nextReqId = 1;
     this.pending = new Map(); // reqId → { resolve, reject }
+    // Active streams keyed by reqId. Each entry is
+    // { onSegment, onEnd, onError, resolve, reject }.
+    this.streams = new Map();
   }
 
   // Spawn the worker. Idempotent: returns immediately if already running.
@@ -52,6 +55,58 @@ class KokoroClient {
       this.onProgress?.(msg.data);
       return;
     }
+    // Streaming protocol routes through this.streams; one-shot requests
+    // route through this.pending.
+    if (msg.type === "stream-segment") {
+      const stream = this.streams.get(msg.reqId);
+      if (!stream) return; // canceled or already torn down
+      const bytes = msg.sampleBytes;
+      const samples = new Float32Array(msg.sampleCount);
+      new Uint8Array(samples.buffer).set(
+        new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength),
+      );
+      try {
+        stream.onSegment?.({
+          segmentIndex: msg.segmentIndex,
+          text: msg.text,
+          samples,
+          samplingRate: msg.samplingRate,
+        });
+      } catch (err) {
+        console.error("[kokoro] onSegment threw:", err);
+      }
+      return;
+    }
+    if (msg.type === "stream-end") {
+      const stream = this.streams.get(msg.reqId);
+      if (!stream) return;
+      this.streams.delete(msg.reqId);
+      try {
+        stream.onEnd?.({
+          segmentCount: msg.segmentCount,
+          totalSynthMs: msg.totalSynthMs,
+          canceled: !!msg.canceled,
+        });
+      } catch (err) {
+        console.error("[kokoro] onEnd threw:", err);
+      }
+      stream.resolve({
+        segmentCount: msg.segmentCount,
+        totalSynthMs: msg.totalSynthMs,
+        canceled: !!msg.canceled,
+      });
+      return;
+    }
+    if (msg.type === "error") {
+      const stream = this.streams.get(msg.reqId);
+      if (stream) {
+        this.streams.delete(msg.reqId);
+        const err = new Error(msg.message);
+        stream.onError?.(err);
+        stream.reject(err);
+        return;
+      }
+    }
     const entry = this.pending.get(msg.reqId);
     if (!entry) return;
     this.pending.delete(msg.reqId);
@@ -60,11 +115,16 @@ class KokoroClient {
   }
 
   handleExit(code) {
-    const reason = `kokoro worker exited (code=${code}); pending=${this.pending.size}`;
+    const reason = `kokoro worker exited (code=${code}); pending=${this.pending.size}, streams=${this.streams.size}`;
     console.error("[kokoro]", reason);
     const err = new Error("kokoro worker crashed: " + reason);
     for (const { reject } of this.pending.values()) reject(err);
     this.pending.clear();
+    for (const stream of this.streams.values()) {
+      try { stream.onError?.(err); } catch {}
+      stream.reject(err);
+    }
+    this.streams.clear();
     this.proc = null;
     this.ready = false;
     this.loaded = false;
@@ -109,6 +169,30 @@ class KokoroClient {
       samples,
       samplingRate: result.samplingRate,
       synthMs: result.synthMs,
+    };
+  }
+
+  // Streaming generate. Resolves when the worker reports stream-end; rejects
+  // on error or worker crash. `onSegment` is called per yielded sentence
+  // with { segmentIndex, text, samples: Float32Array, samplingRate }.
+  // Returns { cancel(): void, done: Promise<{segmentCount,totalSynthMs,canceled}> }.
+  generateStream({ voice, text, speed, onSegment, onEnd, onError }) {
+    if (!this.proc) {
+      throw new Error("kokoro worker not running");
+    }
+    const reqId = this.nextReqId++;
+    let resolve, reject;
+    const done = new Promise((res, rej) => { resolve = res; reject = rej; });
+    this.streams.set(reqId, { onSegment, onEnd, onError, resolve, reject });
+    this.proc.postMessage({ type: "stream", reqId, voice, text, speed });
+    return {
+      reqId,
+      done,
+      cancel: () => {
+        if (this.streams.has(reqId) && this.proc) {
+          try { this.proc.postMessage({ type: "stream-cancel", reqId }); } catch {}
+        }
+      },
     };
   }
 
