@@ -40,18 +40,23 @@ jobs:
       # --- Desktop app (DMG) -------------------------------------------------
 
       # Signing + notarization auto-enable as soon as CSC_LINK is set in repo
-      # secrets. Until then, force `identity=null` on the CLI — otherwise
-      # electron-builder receives CSC_LINK="" (GitHub Actions sets env vars
-      # for empty secrets too) and tries to read the empty string as a file
-      # path, crashing with "apps/desktop not a file" before we ever reach
-      # the signing stage. The CLI override bypasses the env-var path
-      # entirely on unsigned runs.
+      # secrets. Until then, force `identity=null` on the electron-builder
+      # CLI — otherwise it receives CSC_LINK="" (GitHub Actions sets env
+      # vars for empty secrets too) and tries to read the empty string as a
+      # file path, crashing with "apps/desktop not a file" before we ever
+      # reach the signing stage. We bypass the `dist:mac` pnpm script and
+      # invoke vite + electron-builder directly so the `--config.mac.identity`
+      # override reaches electron-builder as a real flag (running it via the
+      # script causes pnpm's arg-forwarding to push it past a literal `--`,
+      # which electron-builder then treats as a positional arg).
       - name: Build desktop app
         run: |
+          pnpm -F @boxtalk/app build
+          cd apps/desktop
           if [ -n "$CSC_LINK" ]; then
-            pnpm -F @boxtalk/app dist:mac
+            pnpm exec electron-builder --mac
           else
-            pnpm -F @boxtalk/app dist:mac -- --config.mac.identity=null
+            pnpm exec electron-builder --mac --config.mac.identity=null
           fi
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
