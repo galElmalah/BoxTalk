@@ -52,9 +52,12 @@ jobs:
           # release fetch in apps/sites/landing/src/pages/index.astro.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # NB: wrangler-action@v3 tries `pnpm exec wrangler` first, which fails in
+      # this pnpm workspace (wrangler isn't a workspace dep), then tries
+      # `pnpm add wrangler` at the root, which pnpm refuses without `-w`.
+      # Side-step the action and call wrangler directly via npx.
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy apps/sites/landing/dist --project-name=boxtalk --branch=main
+        run: npx --yes wrangler@^3 pages deploy apps/sites/landing/dist --project-name=boxtalk --branch=main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
